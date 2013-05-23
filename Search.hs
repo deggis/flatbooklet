@@ -1,4 +1,6 @@
-module Search where
+module Search
+    (Doc
+    ,search) where
 
 import Text.ParserCombinators.Parsec
 import Control.Applicative ((<$>),(*>),(<*))
