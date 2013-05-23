@@ -3,10 +3,16 @@ module Types where
 
 type Doc = String
 
-newtype SHA1 = SHA1 String deriving(Eq,Show)
+newtype SHA1 = SHA1 String deriving(Eq)
 
-data Documents = Documents { state :: SHA1
-                           , docs  :: [Doc] }
+instance Show SHA1 where
+    show (SHA1 s) = "SHA1:"++s
 
-instance Eq Documents where
-    Documents{state=s1} == Documents{state=s2} = s1 == s2
+data Repository = Repository { state :: SHA1
+                             , docs  :: [Doc] }
+
+instance Eq Repository where
+    Repository{state=s1} == Repository{state=s2} = s1 == s2
+
+instance Show Repository where
+    show r = "Repository "++show (state r)++" with "++show (length (docs r))++ " documents."

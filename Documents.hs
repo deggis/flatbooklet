@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RecordWildCards #-}
 module Documents where
 
 import System.Directory
@@ -11,14 +12,19 @@ import Lib.Git as G
 import Search
 import Types
 
-load :: FilePath -> IO [Doc]
-load dir = do
+
+loadDocuments :: FilePath -> IO (Either String Repository)
+loadDocuments dir = do
    all <- getDirectoryContents dir
    -- filter out directories (".", "..", ...) from results
    files <- filterM (doesFileExist . toPath) all
    docs <- mapM (readFile . toPath) files
-   return docs
-  where toPath fn = dir ++ "/" ++ fn
+   sha1res <- currentSHA1 dir
+   case sha1res of
+       Left msg    -> return $ Left msg
+       Right state -> return $ Right Repository{..}
+  where
+    toPath fn = dir ++ "/" ++ fn
 
 
 -- |Return SHA1 of the current commit in given dir
