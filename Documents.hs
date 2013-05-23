@@ -9,9 +9,7 @@ import Control.Arrow
 import Lib.Git as G
 
 import Search
-
-
-data Documents = Documents 
+import Types
 
 load :: FilePath -> IO [Doc]
 load dir = do
@@ -24,9 +22,9 @@ load dir = do
 
 
 -- |Return SHA1 of the current commit in given dir
-currentSHA1 :: FilePath -> IO (Either String String)
+currentSHA1 :: FilePath -> IO (Either String SHA1)
 currentSHA1 dir = do
     out <- G.runGit (G.Config dir Nothing) $ G.gitExec "rev-parse" ["HEAD"] []
     -- Make possible GitError in Left to String with show
-    return . left show . right (head.lines) $ out
+    return . left show . right (SHA1 . head . lines) $ out
  

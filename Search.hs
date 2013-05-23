@@ -1,11 +1,10 @@
 module Search
-    (Doc
-    ,search) where
+    (search) where
 
 import Text.ParserCombinators.Parsec
 import Control.Applicative ((<$>),(*>),(<*))
 
-type Doc = String
+import Types
 
 data Search = StringMatch String
             | TagMatch String
