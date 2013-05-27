@@ -1,3 +1,6 @@
 *~
 log
 cabal-dev
+users.json
+site_key.txt
+dist
