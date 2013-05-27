@@ -13,12 +13,18 @@ import Search
 import Types
 
 
+-- |Load files and close handles explicitly to
+-- avoid having too many open handles
+loadFiles :: [FilePath] -> IO [Doc]
+loadFiles (f:files)
+
+
 loadDocuments :: FilePath -> IO (Either String Repository)
 loadDocuments dir = do
    all <- getDirectoryContents dir
    -- filter out directories (".", "..", ...) from results
    files <- filterM (doesFileExist . toPath) all
-   docs <- mapM (readFile . toPath) files
+   docs <- loadFiles $ map toPath files
    sha1res <- currentSHA1 dir
    case sha1res of
        Left msg    -> return $ Left msg
