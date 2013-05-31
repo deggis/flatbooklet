@@ -25,6 +25,7 @@ import qualified Heist.Interpreted as I
 ------------------------------------------------------------------------------
 import           Application
 
+import           Flatbooklet
 
 ------------------------------------------------------------------------------
 -- | Render login form
@@ -82,7 +83,10 @@ app = makeSnaplet "app" "An snaplet example application." Nothing $ do
     -- you'll probably want to change this to a more robust auth backend.
     a <- nestSnaplet "auth" auth $
            initJsonFileAuthManager defAuthSettings sess "users.json"
+
+    db <- nestSnaplet "db" db $ flatbookletInit auth
+           
     addRoutes routes
     addAuthSplices h auth
-    return $ App h s a
+    return $ App h s a db
 
