@@ -9,9 +9,10 @@ import Snap.Snaplet.Auth
 import Control.Monad.State
 import Control.Monad.IO.Class
 import Control.Applicative
-import Control.Concurrent.MVar
+import Control.Concurrent.STM
 
-import Data.Text
+import qualified Data.Text as T
+import Data.Text (Text)
 import Data.Text.Encoding
 import Data.Maybe
 
@@ -21,7 +22,7 @@ import qualified Data.ByteString as B
 import Snaplet.Types
 
 data Flatbooklet a = Flatbooklet { flatbookletAuth :: SnapletLens a (AuthManager a)
-                                 , userData        :: MVar (M.Map Text [Doc])
+                                 , userData        :: TVar (M.Map Text [Doc])
                                  , dataDir         :: FilePath }
 
 deny :: Handler a (Flatbooklet a) ()
@@ -32,7 +33,7 @@ deny = do
 
 protect :: Handler a (Flatbooklet a) () -> Handler a (Flatbooklet a) ()
 protect action = (flatbookletAuth <$> get) >>= \auth -> requireUser auth deny $ do
-    login <- getUser 
+    login <- getLogin
     urlUser <- fmap decodeUtf8 <$> getParam "user"
     case urlUser of
         Nothing -> deny -- invalid URL
@@ -50,18 +51,38 @@ getDoc = withDocs $ do
 
 -- |Returns login of the current user logged in.
 -- NOTE: Logged in user is assumed.
-getUser :: Handler a (Flatbooklet a) Text
-getUser = (flatbookletAuth <$> get) >>= \auth -> do
+getLogin :: Handler a (Flatbooklet a) Text
+getLogin = (flatbookletAuth <$> get) >>= \auth -> do
     (userLogin . fromJust) <$> withTop auth currentUser
     
 -- |Wrapper that loads documents for current user if needed.
+-- FIXME: simply do this only at user login
+-- FIXME: rename
 withDocs :: Handler a (Flatbooklet a) () -> Handler a (Flatbooklet a) ()
 withDocs action = do
-    login <- getUser
+    login <- getLogin
+    datavar <- userData <$> get
+    liftIO . atomically $ do
+        userData <- readTVar datavar
+        if M.member login userData
+            then return ()
+            else modifyTVar' datavar (\m -> M.insert login ["sampledata","asd"] m)
     action
 
+getUserDocs :: Handler a (Flatbooklet a) [Doc]
+getUserDocs = do
+    login <- getLogin
+    datavar <- userData <$> get
+    d <- M.lookup login <$> (liftIO $ readTVarIO datavar)
+    case d of
+        Just docs -> return docs
+        Nothing   -> return ["error"]
+        
+
 getStats :: Handler a (Flatbooklet a) ()
-getStats = withDocs $ writeText "0 documents"
+getStats = withDocs $ do
+    docs <- getUserDocs
+    writeText . T.pack $ show (length docs) ++ " documents"
 
 flatbookletInit :: SnapletLens a (AuthManager a) -> SnapletInit a (Flatbooklet a)
 flatbookletInit authLens = makeSnaplet "Flatbooklet" "Flatbooklet git backend" Nothing $ do
@@ -69,7 +90,6 @@ flatbookletInit authLens = makeSnaplet "Flatbooklet" "Flatbooklet git backend" N
               , ("/:user/get/:id", protect getDoc)
               , ("/:user/stats", protect getStats)
               ]
-    docs <- liftIO $ newMVar M.empty
-    liftIO $ putStrLn "Initializing snaplet"
+    docs <- liftIO $ newTVarIO M.empty
     return $ Flatbooklet authLens docs path
   where path = "data" -- TODO: read from config

@@ -35,7 +35,8 @@ Executable flatbooklet-snap
     time                      >= 1.1     && < 1.5,
     xmlhtml                   >= 0.1,
     transformers,
-    containers
+    containers,
+    stm
 
   if flag(old-base)
     build-depends:
