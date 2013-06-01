@@ -25,7 +25,7 @@ import qualified Heist.Interpreted as I
 ------------------------------------------------------------------------------
 import           Application
 
-import           Flatbooklet
+import           Snaplet.Flatbooklet
 
 ------------------------------------------------------------------------------
 -- | Render login form

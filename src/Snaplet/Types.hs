@@ -1,5 +1,5 @@
 {-# LANGUAGE RecordWildCards #-}
-module Types where
+module Snaplet.Types where
 
 type Doc = String
 

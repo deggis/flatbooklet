@@ -1,10 +1,10 @@
-module Search
+module Snaplet.Search
     (search) where
 
 import Text.ParserCombinators.Parsec
 import Control.Applicative ((<$>),(*>),(<*))
 
-import Types
+import Snaplet.Types
 
 data Search = StringMatch String
             | TagMatch String
