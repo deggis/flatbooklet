@@ -1,4 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Snaplet.Flatbooklet where
 
@@ -26,32 +28,34 @@ data Flatbooklet a = Flatbooklet
     , userData        :: TVar (M.Map Text [Doc])
     , dataDir         :: FilePath }
 
-deny :: Handler a (Flatbooklet a) ()
-deny = do
+type FlatHandler r = forall a. Handler a (Flatbooklet a) r
+
+unauthorized :: FlatHandler ()
+unauthorized = do
     modifyResponse $ setResponseStatus 401 "Unauthorized"
     writeText "User not logged in."
+
 
 -- | Wraps given handler with checks to ensure
 -- a) a logged in user and
 -- b) that the specified user in URL matches the logged in user
-protect :: Handler a (Flatbooklet a) () -- ^ void handler to protect
-        -> Handler a (Flatbooklet a) ()
-protect action = (flatbookletAuth <$> get) >>= \auth -> requireUser auth deny $ do
-    login <- getLogin
-    urlUser <- fmap decodeUtf8 <$> getParam "user"
-    case urlUser of
-        Nothing -> deny -- invalid URL
-        Just userName -> if userName == login
-                            then action
-                            else deny -- hack attempt
+protect :: FlatHandler () -- ^ void handler to protect
+        -> FlatHandler ()
+protect action = (flatbookletAuth <$> get) >>= \auth -> requireUser auth unauthorized $ do
+    withLogin $ \login -> do 
+        urlUser <- fmap decodeUtf8 <$> getParam "user"
+        case urlUser of
+            Nothing -> unauthorized 
+            Just userName -> if userName == login
+                                then action
+                                else unauthorized -- hack attempt
 
 -- | Serve doc with given id, lookup from user's documents.
 -- Returns HTTP 400 "Bad request" if id missing (routing prevents this)
 -- Returns HTTP 404 "Not found" if document not found
-getDoc :: Handler a (Flatbooklet a) ()
-getDoc = do 
+getDoc :: FlatHandler ()
+getDoc = withUserCache $ \cache -> do
     idm <- getParam "id"
-    cache <- readUserCache
     case idm of
         Just ids -> writeBS $ "TODO: Document with id: " `B.append` ids
         Nothing  -> modifyResponse $ setResponseStatus 400 "Bad request"
@@ -59,43 +63,36 @@ getDoc = do
 -- | Serve all user's documents in JSON list containing
 -- { id: ID, doc: DOC } doc ids and documents truncated
 -- to 100 characters.
-getDocs :: Handler a (Flatbooklet a) ()
-getDocs = do
-    cache <- readUserCache
+getDocs :: FlatHandler ()
+getDocs = withUserCache $ \cache -> do
     -- FIXME: format as specs say
     writeText . T.pack . show $ cache
 
 
 -- | Return user document overall statistics as JSON
 -- document.
-getStats :: Handler a (Flatbooklet a) ()
-getStats = undefined --withDocs -- $ d
---    docs <- getDocs
---    writeText . T.pack $ show (length docs) ++ " documents"
+getStats :: FlatHandler ()
+getStats = withUserCache $ \cache -> do
+    writeText . T.pack $ show (length cache) ++ " documents"
 
 
 -- | Returns login of the current user logged in.
 -- NOTE: Logged in user is assumed.
-getLogin :: Handler a (Flatbooklet a) Text
-getLogin = (flatbookletAuth <$> get) >>= \auth -> do
-    (userLogin . fromJust) <$> withTop auth currentUser
-    
-
+withLogin action = (flatbookletAuth <$> get) >>= \auth -> do
+    l <- fmap userLogin <$> withTop auth currentUser
+    case l of
+        Just login -> action login
+        Nothing    -> unauthorized
 
 -- | Perform tasks associated to user login. Load documents and
 -- create indices.
-atLogin :: Handler a (Flatbooklet a) ()
-atLogin = do 
-    login <- getLogin
-    datavar <- userData <$> get
-    liftIO . atomically $ do
-        userData <- readTVar datavar
-        if M.member login userData
-            then return ()
-            else modifyTVar' datavar (\m -> M.insert login ["sampledata","asd"] m)
+atLogin :: FlatHandler ()
+atLogin = do
+    ioStuff <- return ["sampledata","asd"]
+    modifyUserCache (\_ -> ioStuff)
 
 -- | Perform tasks associated to user logout. Forget all kept stuff.
-atLogout :: Handler a (Flatbooklet a) ()
+atLogout :: FlatHandler ()
 atLogout = rmUserCache
 
 flatbookletInit :: SnapletLens a (AuthManager a) -> SnapletInit a (Flatbooklet a)
@@ -113,25 +110,28 @@ flatbookletInit authLens = makeSnaplet "Flatbooklet" "Flatbooklet git backend" N
 
 
 -- cache poking helpers
-        
-readUserCache = do
-    (l,v) <- loginAndCacheTVar
-    cache <- liftIO $ readTVarIO v
-    return . fromJust . M.lookup l $ cache
+withUserCache :: ([Doc] -> FlatHandler ())
+              -> FlatHandler ()
+withUserCache handler = withLogin $ \l -> do
+    v <- cacheTVar
+    allCache <- liftIO $ readTVarIO v
+    let cache :: [Doc] = fromJust . M.lookup l $ allCache
+    handler cache
 
-withUserCache action = do
-    (l,v) <- loginAndCacheTVar
+modifyUserCache :: ([Doc] -> [Doc]) -- ^ action to perform on user docs
+                -> FlatHandler ()
+modifyUserCache action = withLogin $ \l -> do
+    v <- cacheTVar
     liftIO . atomically $ do
         cache <- readTVar v
         let userdocs = fromMaybe [] $ M.lookup l cache
         -- Data.Map.insert adds or replaces (if needed) previous contents
         modifyTVar' v $ M.insert l (action userdocs)
 
-rmUserCache = do
-    (l,v) <- loginAndCacheTVar
+rmUserCache :: FlatHandler ()
+rmUserCache = withLogin $ \l -> do
+    v <- cacheTVar
     liftIO . atomically $ modifyTVar' v (\m -> M.delete l m)
 
-loginAndCacheTVar = do
-    login <- getLogin
-    cvar <- userData <$> get
-    return (login,cvar)
+cacheTVar :: FlatHandler (TVar (M.Map Text [Doc]))
+cacheTVar = userData <$> get
