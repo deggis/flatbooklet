@@ -48,7 +48,7 @@ handleLoginSubmit atLogin =
 -- performs given logout handler
 handleLogout :: Handler App (AuthManager App) () -- ^ logout tasks handler
              -> Handler App (AuthManager App) ()
-handleLogout atLogout = logout >> atLogout >> redirect "/"
+handleLogout atLogout = atLogout >> logout >> redirect "/"
 
 
 -- | Handle new user form submit
