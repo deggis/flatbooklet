@@ -25,7 +25,7 @@ import qualified Heist.Interpreted as I
 ------------------------------------------------------------------------------
 import           Application
 
-import           Snaplet.Flatbooklet
+import           Snaplet.Flatbooklet as F
 
 -- | Render login form
 handleLogin :: Maybe T.Text -> Handler App (AuthManager App) ()
@@ -37,9 +37,9 @@ handleLogin authError = heistLocal (I.bindSplices errs) $ render "login"
 -- | Handle login submit. Perform given task handler if login successful
 handleLoginSubmit :: Handler App (AuthManager App) () -- ^ login tasks handler
                   -> Handler App (AuthManager App) ()
-handleLoginSubmit tasks =
+handleLoginSubmit atLogin =
     loginUser "login" "password" Nothing
-              (\_ -> handleLogin err) (tasks >> redirect "/")
+              (\_ -> handleLogin err) (atLogin >> redirect "/")
   where
     err = Just "Unknown user or password"
 
@@ -48,7 +48,7 @@ handleLoginSubmit tasks =
 -- performs given logout handler
 handleLogout :: Handler App (AuthManager App) () -- ^ logout tasks handler
              -> Handler App (AuthManager App) ()
-handleLogout tasks = logout >> tasks >> redirect "/"
+handleLogout atLogout = logout >> atLogout >> redirect "/"
 
 
 -- | Handle new user form submit
@@ -63,9 +63,9 @@ handleNewUser = method GET handleForm <|> method POST handleFormSubmit
 routes :: Handler App (AuthManager App) ()
        -> Handler App (AuthManager App) ()
        -> [(ByteString, Handler App App ())]
-routes fbLogin fbLogout =
-    [ ("/login",    with auth $ handleLoginSubmit fbLogin)
-    , ("/logout",   with auth $ handleLogout fbLogout)
+routes atLogin atLogout =
+    [ ("/login",    with auth $ handleLoginSubmit atLogin)
+    , ("/logout",   with auth $ handleLogout atLogout)
     , ("/new_user", with auth handleNewUser)
     , ("",          serveDirectory "static")
     ]
@@ -86,10 +86,7 @@ app = makeSnaplet "app" "An snaplet example application." Nothing $ do
 
     fbl <- nestSnaplet "fb" fb $ flatbookletInit auth
            
-    let fbLogin = return ()
-        fbLogout = return ()
-
-    addRoutes $ routes fbLogin fbLogout
+    addRoutes $ routes (withTop fb F.atLogin) (withTop fb F.atLogout)
     addAuthSplices h auth
     return $ App h s a fbl
 

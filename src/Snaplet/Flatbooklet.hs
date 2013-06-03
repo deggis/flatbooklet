@@ -96,9 +96,11 @@ withDocs action = do
             else modifyTVar' datavar (\m -> M.insert login ["sampledata","asd"] m)
     action     
 
---flatbookletHandleLogin :: Handler a (Flatbooklet a) ()
+atLogin :: Handler a (Flatbooklet a) ()
+atLogin = liftIO $ putStrLn "FB: login"
 
-
+atLogout :: Handler a (Flatbooklet a) ()
+atLogout = liftIO $ putStrLn "FB: logout"
 
 flatbookletInit :: SnapletLens a (AuthManager a) -> SnapletInit a (Flatbooklet a)
 flatbookletInit authLens = makeSnaplet "Flatbooklet" "Flatbooklet git backend" Nothing $ do
