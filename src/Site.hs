@@ -84,12 +84,12 @@ app = makeSnaplet "app" "An snaplet example application." Nothing $ do
     a <- nestSnaplet "auth" auth $
            initJsonFileAuthManager defAuthSettings sess "users.json"
 
-    db <- nestSnaplet "db" db $ flatbookletInit auth
+    fbl <- nestSnaplet "fb" fb $ flatbookletInit auth
            
     let fbLogin = return ()
         fbLogout = return ()
 
     addRoutes $ routes fbLogin fbLogout
     addAuthSplices h auth
-    return $ App h s a db
+    return $ App h s a fbl
 
