@@ -96,6 +96,10 @@ withDocs action = do
             else modifyTVar' datavar (\m -> M.insert login ["sampledata","asd"] m)
     action     
 
+--flatbookletHandleLogin :: Handler a (Flatbooklet a) ()
+
+
+
 flatbookletInit :: SnapletLens a (AuthManager a) -> SnapletInit a (Flatbooklet a)
 flatbookletInit authLens = makeSnaplet "Flatbooklet" "Flatbooklet git backend" Nothing $ do
     addRoutes [ ("/hello", writeText "hello world with snaplets!" )

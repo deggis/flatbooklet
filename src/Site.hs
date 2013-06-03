@@ -27,7 +27,6 @@ import           Application
 
 import           Snaplet.Flatbooklet
 
-------------------------------------------------------------------------------
 -- | Render login form
 handleLogin :: Maybe T.Text -> Handler App (AuthManager App) ()
 handleLogin authError = heistLocal (I.bindSplices errs) $ render "login"
@@ -35,23 +34,23 @@ handleLogin authError = heistLocal (I.bindSplices errs) $ render "login"
     errs = [("loginError", I.textSplice c) | c <- maybeToList authError]
 
 
-------------------------------------------------------------------------------
--- | Handle login submit
-handleLoginSubmit :: Handler App (AuthManager App) ()
-handleLoginSubmit =
+-- | Handle login submit. Perform given task handler if login successful
+handleLoginSubmit :: Handler App (AuthManager App) () -- ^ login tasks handler
+                  -> Handler App (AuthManager App) ()
+handleLoginSubmit tasks =
     loginUser "login" "password" Nothing
-              (\_ -> handleLogin err) (redirect "/")
+              (\_ -> handleLogin err) (tasks >> redirect "/")
   where
     err = Just "Unknown user or password"
 
 
-------------------------------------------------------------------------------
--- | Logs out and redirects the user to the site index.
-handleLogout :: Handler App (AuthManager App) ()
-handleLogout = logout >> redirect "/"
+-- | Logs out and redirects the user to the site index,
+-- performs given logout handler
+handleLogout :: Handler App (AuthManager App) () -- ^ logout tasks handler
+             -> Handler App (AuthManager App) ()
+handleLogout tasks = logout >> tasks >> redirect "/"
 
 
-------------------------------------------------------------------------------
 -- | Handle new user form submit
 handleNewUser :: Handler App (AuthManager App) ()
 handleNewUser = method GET handleForm <|> method POST handleFormSubmit
@@ -60,18 +59,19 @@ handleNewUser = method GET handleForm <|> method POST handleFormSubmit
     handleFormSubmit = registerUser "login" "password" >> redirect "/"
 
 
-------------------------------------------------------------------------------
--- | The application's routes.
-routes :: [(ByteString, Handler App App ())]
-routes = [ ("/login",    with auth handleLoginSubmit)
-         , ("/logout",   with auth handleLogout)
-         , ("/new_user", with auth handleNewUser)
-         , ("",          serveDirectory "static")
-         ]
+-- | The application's routes
+routes :: Handler App (AuthManager App) ()
+       -> Handler App (AuthManager App) ()
+       -> [(ByteString, Handler App App ())]
+routes fbLogin fbLogout =
+    [ ("/login",    with auth $ handleLoginSubmit fbLogin)
+    , ("/logout",   with auth $ handleLogout fbLogout)
+    , ("/new_user", with auth handleNewUser)
+    , ("",          serveDirectory "static")
+    ]
 
 
-------------------------------------------------------------------------------
--- | The application initializer.
+-- | The application initializer
 app :: SnapletInit App App
 app = makeSnaplet "app" "An snaplet example application." Nothing $ do
     h <- nestSnaplet "" heist $ heistInit "templates"
@@ -86,7 +86,10 @@ app = makeSnaplet "app" "An snaplet example application." Nothing $ do
 
     db <- nestSnaplet "db" db $ flatbookletInit auth
            
-    addRoutes routes
+    let fbLogin = return ()
+        fbLogout = return ()
+
+    addRoutes $ routes fbLogin fbLogout
     addAuthSplices h auth
     return $ App h s a db
 
