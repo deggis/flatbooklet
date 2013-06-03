@@ -21,17 +21,21 @@ import qualified Data.ByteString as B
 
 import Snaplet.Types
 
-data Flatbooklet a = Flatbooklet { flatbookletAuth :: SnapletLens a (AuthManager a)
-                                 , userData        :: TVar (M.Map Text [Doc])
-                                 , dataDir         :: FilePath }
+data Flatbooklet a = Flatbooklet
+    { flatbookletAuth :: SnapletLens a (AuthManager a)
+    , userData        :: TVar (M.Map Text [Doc])
+    , dataDir         :: FilePath }
 
 deny :: Handler a (Flatbooklet a) ()
 deny = do
     modifyResponse $ setResponseStatus 401 "Unauthorized"
     writeText "User not logged in."
 
-
-protect :: Handler a (Flatbooklet a) () -> Handler a (Flatbooklet a) ()
+-- | Wraps given handler with checks to ensure
+-- a) a logged in user and
+-- b) that the specified user in URL matches the logged in user
+protect :: Handler a (Flatbooklet a) () -- ^ void handler to protect
+        -> Handler a (Flatbooklet a) ()
 protect action = (flatbookletAuth <$> get) >>= \auth -> requireUser auth deny $ do
     login <- getLogin
     urlUser <- fmap decodeUtf8 <$> getParam "user"
@@ -41,6 +45,9 @@ protect action = (flatbookletAuth <$> get) >>= \auth -> requireUser auth deny $ 
                             then action
                             else deny
 
+-- | Serve doc with given id, lookup from user's documents.
+-- Returns HTTP 400 "Bad request" if id missing (routing prevents this)
+-- Returns HTTP 404 "Not found" if document not found
 getDoc :: Handler a (Flatbooklet a) ()
 getDoc = withDocs $ do
     idm <- getParam "id"
@@ -49,7 +56,27 @@ getDoc = withDocs $ do
         Nothing ->  do
             modifyResponse $ setResponseStatus 400 "Bad request"
 
--- |Returns login of the current user logged in.
+-- | Serve all user's documents in JSON list containing
+-- { id: ID, doc: DOC } doc ids and documents truncated
+-- to 100 characters.
+getDocs :: Handler a (Flatbooklet a) [Doc]
+getDocs = do
+    login <- getLogin
+    datavar <- userData <$> get
+    d <- M.lookup login <$> (liftIO $ readTVarIO datavar)
+    case d of
+        Just docs -> return docs
+        Nothing   -> return ["error"]
+
+-- | Return user document overall statistics as JSON
+-- document.
+getStats :: Handler a (Flatbooklet a) ()
+getStats = withDocs $ do
+    docs <- getDocs
+    writeText . T.pack $ show (length docs) ++ " documents"
+
+
+-- | Returns login of the current user logged in.
 -- NOTE: Logged in user is assumed.
 getLogin :: Handler a (Flatbooklet a) Text
 getLogin = (flatbookletAuth <$> get) >>= \auth -> do
@@ -67,22 +94,7 @@ withDocs action = do
         if M.member login userData
             then return ()
             else modifyTVar' datavar (\m -> M.insert login ["sampledata","asd"] m)
-    action
-
-getUserDocs :: Handler a (Flatbooklet a) [Doc]
-getUserDocs = do
-    login <- getLogin
-    datavar <- userData <$> get
-    d <- M.lookup login <$> (liftIO $ readTVarIO datavar)
-    case d of
-        Just docs -> return docs
-        Nothing   -> return ["error"]
-        
-
-getStats :: Handler a (Flatbooklet a) ()
-getStats = withDocs $ do
-    docs <- getUserDocs
-    writeText . T.pack $ show (length docs) ++ " documents"
+    action     
 
 flatbookletInit :: SnapletLens a (AuthManager a) -> SnapletInit a (Flatbooklet a)
 flatbookletInit authLens = makeSnaplet "Flatbooklet" "Flatbooklet git backend" Nothing $ do
