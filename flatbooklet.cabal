@@ -1,10 +1,10 @@
 Name:                flatbooklet-snap
 Version:             0.1
-Synopsis:            Project Synopsis Here
-Description:         Project Description Here
+Synopsis:            A notekeeping web application built with Snap
+Description:         
 License:             AllRightsReserved
-Author:              Author
-Maintainer:          maintainer@example.com
+Author:              Heikki Salo (aka deggis)
+Maintainer:          heikki.ao.salo@iki.fi
 Stability:           Experimental
 Category:            Web
 Build-type:          Simple
