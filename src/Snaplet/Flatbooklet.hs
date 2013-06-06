@@ -90,7 +90,7 @@ withLogin action = (flatbookletAuth <$> get) >>= \auth -> do
 atLogin :: FlatHandler ()
 atLogin = do
     ioStuff <- return $ UserCache (SHA1 "10") M.empty
-    modifyUserCache (\_ -> ioStuff)
+    initUserCache (\_ -> ioStuff)
 
 -- | Perform tasks associated to user logout. Forget all kept stuff.
 atLogout :: FlatHandler ()
@@ -126,6 +126,10 @@ withUserCacheTVar handler = withLogin $ \l -> do
     -- 'fromJust': the use of withLogin wrapper
     -- ensures that Map contains given login
     handler $ fromJust . M.lookup l $ caches
+
+initUserCache :: UserCache -> FlatHandler ()
+initUserCache cache = withUserCacheTVar $ \ct ->
+    liftIO . atomically $ writeTVar ct cache
 
 
 modifyUserCache :: (UserCache -> UserCache) -- ^ action to perform on user docs
