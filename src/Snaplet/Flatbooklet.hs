@@ -78,8 +78,7 @@ getStats = withUserCache $ \cache ->
     writeText . T.pack $ show cache
 
 
--- | Returns login of the current user logged in.
--- NOTE: Logged in user is assumed.
+-- | Wrap given 'handler', feed it with user login 
 withLogin action = (flatbookletAuth <$> get) >>= \auth -> do
     l <- fmap userLogin <$> withTop auth currentUser
     case l of
