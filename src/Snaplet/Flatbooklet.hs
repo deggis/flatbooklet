@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
-
 module Snaplet.Flatbooklet where
 
 import Snap.Snaplet
@@ -23,12 +22,14 @@ import qualified Data.ByteString as B
 
 import Snaplet.Types
 
+
 data Flatbooklet a = Flatbooklet
     { flatbookletAuth :: SnapletLens a (AuthManager a)
-    , userData        :: TVar (M.Map Text [Doc])
+    , caches          :: TVar Caches
     , dataDir         :: FilePath }
 
 type FlatHandler r = forall a. Handler a (Flatbooklet a) r
+
 
 unauthorized :: FlatHandler ()
 unauthorized = do
@@ -73,7 +74,7 @@ getDocs = withUserCache $ \cache -> do
 -- document.
 getStats :: FlatHandler ()
 getStats = withUserCache $ \cache -> do
-    writeText . T.pack $ show (length cache) ++ " documents"
+    writeText . T.pack $ show cache
 
 
 -- | Returns login of the current user logged in.
@@ -88,7 +89,7 @@ withLogin action = (flatbookletAuth <$> get) >>= \auth -> do
 -- create indices.
 atLogin :: FlatHandler ()
 atLogin = do
-    ioStuff <- return ["sampledata","asd"]
+    ioStuff <- return $ UserCache (SHA1 "10") M.empty
     modifyUserCache (\_ -> ioStuff)
 
 -- | Perform tasks associated to user logout. Forget all kept stuff.
@@ -102,36 +103,44 @@ flatbookletInit authLens = makeSnaplet "Flatbooklet" "Flatbooklet git backend" N
               , ("/:user/all",     protect getDocs)
               , ("/:user/stats",   protect getStats)
               ]
-    docs <- liftIO $ newTVarIO M.empty
-    return $ Flatbooklet authLens docs path
+    cache <- liftIO . newTVarIO $ M.empty 
+    return $ Flatbooklet authLens cache path
   where path = "data" -- TODO: read from config
 
 
 
 
 -- cache poking helpers
-withUserCache :: ([Doc] -> FlatHandler ())
+
+withUserCache :: (UserCache -> FlatHandler ())
               -> FlatHandler ()
-withUserCache handler = withLogin $ \l -> do
-    v <- cacheTVar
-    allCache <- liftIO $ readTVarIO v
-    let cache :: [Doc] = fromJust . M.lookup l $ allCache
-    handler cache
+withUserCache handler = withUserCacheTVar $ (\ct -> (liftIO . readTVarIO) ct >>= handler)
 
-modifyUserCache :: ([Doc] -> [Doc]) -- ^ action to perform on user docs
+    
+withUserCacheTVar :: (TVar UserCache -> FlatHandler ())
+              -> FlatHandler ()
+withUserCacheTVar handler = withLogin $ \l -> do
+    v <- cachesTVar
+    caches :: Caches <- liftIO . readTVarIO $ v
+    
+    -- 'fromJust': the use of withLogin wrapper
+    -- ensures that Map contains given login
+    handler $ fromJust . M.lookup l $ caches
+
+
+modifyUserCache :: (UserCache -> UserCache) -- ^ action to perform on user docs
                 -> FlatHandler ()
-modifyUserCache action = withLogin $ \l -> do
-    v <- cacheTVar
-    liftIO . atomically $ do
-        cache <- readTVar v
-        let userdocs = fromMaybe [] $ M.lookup l cache
-        -- Data.Map.insert adds or replaces (if needed) previous contents
-        modifyTVar' v $ M.insert l (action userdocs)
+modifyUserCache action =
+    withLogin $ \l ->
+        withUserCacheTVar $ \cv ->
+            liftIO . atomically $ modifyTVar' cv (\cache -> action cache)
 
+-- | Removes UserCache from Cache.
+-- Just removes entry from Map, leaving (TVar Cache) to GC's mercy.
 rmUserCache :: FlatHandler ()
 rmUserCache = withLogin $ \l -> do
-    v <- cacheTVar
+    v <- cachesTVar
     liftIO . atomically $ modifyTVar' v (\m -> M.delete l m)
 
-cacheTVar :: FlatHandler (TVar (M.Map Text [Doc]))
-cacheTVar = userData <$> get
+cachesTVar :: FlatHandler (TVar Caches)
+cachesTVar = caches <$> get
