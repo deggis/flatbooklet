@@ -7,6 +7,7 @@ import Snap.Snaplet
 import Snap.Core
 import Snap.Snaplet.Auth
 
+import Control.Monad
 import Control.Monad.State
 import Control.Monad.IO.Class
 import Control.Applicative
@@ -42,7 +43,7 @@ unauthorized = do
 -- b) that the specified user in URL matches the logged in user
 protect :: FlatHandler () -- ^ void handler to protect
         -> FlatHandler ()
-protect action = (flatbookletAuth <$> get) >>= \auth -> requireUser auth unauthorized $ do
+protect action = (flatbookletAuth <$> get) >>= \auth -> requireUser auth unauthorized $
     withLogin $ \login -> do 
         urlUser <- fmap decodeUtf8 <$> getParam "user"
         case urlUser of
@@ -65,7 +66,7 @@ getDoc = withUserCache $ \cache -> do
 -- { id: ID, doc: DOC } doc ids and documents truncated
 -- to 100 characters.
 getDocs :: FlatHandler ()
-getDocs = withUserCache $ \cache -> do
+getDocs = withUserCache $ \cache ->
     -- FIXME: format as specs say
     writeText . T.pack . show $ cache
 
@@ -73,7 +74,7 @@ getDocs = withUserCache $ \cache -> do
 -- | Return user document overall statistics as JSON
 -- document.
 getStats :: FlatHandler ()
-getStats = withUserCache $ \cache -> do
+getStats = withUserCache $ \cache ->
     writeText . T.pack $ show cache
 
 
@@ -89,8 +90,8 @@ withLogin action = (flatbookletAuth <$> get) >>= \auth -> do
 -- create indices.
 atLogin :: FlatHandler ()
 atLogin = do
-    ioStuff <- return $ UserCache (SHA1 "10") M.empty
-    initUserCache (\_ -> ioStuff)
+    let ioStuff = UserCache (SHA1 "10") M.empty
+    initUserCache (const ioStuff)
 
 -- | Perform tasks associated to user logout. Forget all kept stuff.
 atLogout :: FlatHandler ()
@@ -110,13 +111,18 @@ flatbookletInit authLens = makeSnaplet "Flatbooklet" "Flatbooklet git backend" N
 
 
 
--- cache poking helpers
+
+
+-- *UserCache* functions handle tasks of normal session management.
+-- Could be later replaced with snaplet-typed-sessions or some other
+-- Snaplet session mechanism that allows typed session variables.
+
 
 withUserCache :: (UserCache -> FlatHandler ())
               -> FlatHandler ()
-withUserCache handler = withUserCacheTVar $ (\ct -> (liftIO . readTVarIO) ct >>= handler)
+withUserCache handler = withUserCacheTVar $ (liftIO . readTVarIO) >=> handler
 
-    
+
 withUserCacheTVar :: (TVar UserCache -> FlatHandler ())
               -> FlatHandler ()
 withUserCacheTVar handler = withLogin $ \l -> do
@@ -137,14 +143,14 @@ modifyUserCache :: (UserCache -> UserCache) -- ^ action to perform on user docs
 modifyUserCache action =
     withLogin $ \l ->
         withUserCacheTVar $ \cv ->
-            liftIO . atomically $ modifyTVar' cv (\cache -> action cache)
+            liftIO . atomically $ modifyTVar' cv action
 
 -- | Removes UserCache from Cache.
 -- Just removes entry from Map, leaving (TVar Cache) to GC's mercy.
 rmUserCache :: FlatHandler ()
 rmUserCache = withLogin $ \l -> do
     v <- cachesTVar
-    liftIO . atomically $ modifyTVar' v (\m -> M.delete l m)
+    liftIO . atomically $ modifyTVar' v (M.delete l)
 
 cachesTVar :: FlatHandler (TVar Caches)
 cachesTVar = caches <$> get
