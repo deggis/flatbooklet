@@ -36,7 +36,11 @@ Executable flatbooklet-snap
     xmlhtml                   >= 0.1,
     transformers,
     containers,
-    stm
+    stm,
+    parsec,
+    libgit,
+    filepath,
+    directory
 
   if flag(old-base)
     build-depends:

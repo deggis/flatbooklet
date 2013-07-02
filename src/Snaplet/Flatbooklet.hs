@@ -22,6 +22,7 @@ import qualified Data.Map as M
 import qualified Data.ByteString as B
 
 import Snaplet.Types
+import Snaplet.UserCache
 
 
 data Flatbooklet a = Flatbooklet
@@ -88,9 +89,11 @@ withLogin action = (flatbookletAuth <$> get) >>= \auth -> do
 -- | Perform tasks associated to user login. Load documents and
 -- create indices.
 atLogin :: FlatHandler ()
-atLogin = do
-    let ioStuff = UserCache (SHA1 "10") M.empty
-    initUserCache ioStuff 
+atLogin = withLogin $ \l -> do
+    res <- liftIO $ loadUserCache ("./data/"++(T.unpack l))
+    case res of
+        Left s      -> error s -- TODO: error page
+        Right cache -> initUserCache cache
 
 -- | Perform tasks associated to user logout. Forget all kept stuff.
 atLogout :: FlatHandler ()

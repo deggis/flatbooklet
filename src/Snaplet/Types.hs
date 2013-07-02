@@ -16,10 +16,10 @@ import qualified Data.Map as M
 
 type Doc = Text
 
-newtype SHA1 = SHA1 String deriving(Eq)
+newtype SHA1 = SHA1 String deriving(Eq,Ord)
 
 instance Show SHA1 where
-    show (SHA1 s) = "SHA1:"++s
+    show (SHA1 s) = "SHA1="++s
 
 data UserCache = UserCache
     { _state :: SHA1
