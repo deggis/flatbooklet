@@ -1,15 +1,36 @@
 <apply template="base">
 
   <ifLoggedIn>
-    <p>
-      This is a simple demo page served using
-      <a href="http://snapframework.com/docs/tutorials/heist">Heist</a>
-      and the <a href="http://snapframework.com/">Snap</a> web framework.
-    </p>
 
-    <p>Congrats!  You're logged in as '<loggedInUser/>'</p>
+    <!-- dummy elements to test JS functionality -->
+  
+    <div id="topic">
+      <h2>Flatbooklet</h2>
+    </div>
+    <div id="viewer">
+      <fieldset>
+        <legend>Viewer</legend>
+        <label for="viewer-textarea">(add new)</label>
+        <textarea rows="6" cols="60" id="viewer-textarea"></textarea>
+        <button id="viewer-send" disabled>Add</button>
+      </fieldset>
+    </div>
+    <div id="search">
+      <fieldset>
+        <legend>Search</legend>
+        <input type="text" size="30" />
+        <button id="search-button">Search</button>
+      </fieldset>
+    </div>
+    <div id="latest-container">
+      <h3>Latest</h3>
+      <div id="latest">
+      </div>
+    </div>
 
-    <p><a href="/logout">Logout</a></p>
+    <div id="footer">
+      <p><a href="/logout">Logout</a></p>
+    </div>
   </ifLoggedIn>
 
   <ifLoggedOut>
