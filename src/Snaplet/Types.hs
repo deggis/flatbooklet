@@ -10,6 +10,7 @@ import Control.Concurrent.STM
 import Snap.Snaplet
 import Snap.Core
 import Snap.Snaplet.Auth
+import Data.Aeson as JSON
 
 import Data.Text
 import qualified Data.Map as M

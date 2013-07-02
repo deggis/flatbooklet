@@ -17,6 +17,7 @@ import qualified Data.Text as T
 import Data.Text (Text)
 import Data.Text.Encoding
 import Data.Maybe
+import Data.Aeson as JSON
 
 import qualified Data.Map as M
 import qualified Data.ByteString as B
