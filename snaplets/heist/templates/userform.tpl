@@ -1,14 +1,10 @@
-<form method="post" action="${postAction}">
-  <table id="info">
-    <tr>
-      <td>Login:</td><td><input type="text" name="login" size="20" /></td>
-    </tr>
-    <tr>
-      <td>Password:</td><td><input type="password" name="password" size="20" /></td>
-    </tr>
-    <tr>
-      <td></td>
-      <td><input type="submit" value="${submitText}" /></td>
-    </tr>
-  </table>
+<form method="post" action="${postAction}" class="form-signin">
+  <h2 class="form-signin-heading">Pease sign in</h2>
+
+  <input type="text" class="input-block-level" placeholder="Username" name="login">
+  <input type="password" class="input-block-level" placeholder="Password" name="password">
+  <label class="checkbox">
+    <input type="checkbox" value="remember-me"> Remember me
+  </label>
+  <button class="btn btn-large btn-primary" type="submit">Sign in</button>
 </form>
