@@ -16,6 +16,7 @@
     </script>
     <script type="text/javascript" src="/js/jquery-2.0.2.js"></script>
     <script type="text/javascript" src="/js/bootstrap.js"></script>
+    <script type="text/javascript" src="/js/ejs_production.js"></script>
     <script type="text/javascript" src="/js/flatbooklet.js"></script>
   </body>
 </html>

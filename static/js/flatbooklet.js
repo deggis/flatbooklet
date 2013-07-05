@@ -7,15 +7,21 @@ function get_url_base () {
 
 
 var page_dashboard = function () {
-    $('#content').html('<h2>Welcome</h2>');
+    var html = new EJS({url: '/templates/dashboard.ejs'}).render({ejsvar: flatbooklet.user});
+    $('#content').html(html);
 }
 
+var page_new = function () {
+    var html = new EJS({url: '/templates/new.ejs'}).render();
+    $('#content').html(html);
+}
 
 
 function build_routes () {
 
     var routes = {};
-    routes['#dashboard'] = page_dashboard; 
+    routes['#dashboard'] = page_dashboard;
+    routes['#new']       = page_new;
     
     var open_page = function (hash) {
         $('.nav li.active').removeClass('active');
