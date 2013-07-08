@@ -32,7 +32,7 @@ loadUserCache dir = do
         all   <- getDirectoryContents dir        
         files <- filterM (doesFileExist . toPath) all -- filter out directories (".", "..", ...)
         docs  <- mapM (loadDoc . toPath) files
-        return . M.fromList $ zip (map SHA1 files) docs
+        return . M.fromList $ zip files docs
 
 loadDoc :: FilePath -> IO Doc
 loadDoc path = do
@@ -45,4 +45,4 @@ currentSHA1 :: FilePath -> IO (Either String SHA1)
 currentSHA1 dir = do
     out <- G.runGit (G.Config dir Nothing) $ G.gitExec "rev-parse" ["HEAD"] []
     -- Make possible GitError in Left to String with show
-    return . left show . right (SHA1 . head . lines) $ out
+    return . left show . right (head . lines) $ out

@@ -1,12 +1,14 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE NoMonomorphismRestriction #-}
 module Snaplet.Flatbooklet where
 
 import Snap.Snaplet
 import Snap.Core
 import Snap.Snaplet.Auth
 
+import Control.Lens
 import Control.Monad
 import Control.Monad.State
 import Control.Monad.IO.Class
@@ -21,6 +23,7 @@ import Data.Aeson as JSON
 
 import qualified Data.Map as M
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
 
 import Snaplet.Types
 import Snaplet.UserCache
@@ -69,9 +72,12 @@ getDoc = withUserCache $ \cache -> do
 -- to 100 characters.
 getDocs :: FlatHandler ()
 getDocs = withUserCache $ \cache ->
-    -- FIXME: format as specs say
-    writeText . T.pack . show $ cache
+    writeBS . toStrict . JSON.encode $ view docs cache
 
+toStrict :: BL.ByteString -> B.ByteString
+toStrict = B.concat . BL.toChunks
+
+writeJSON = writeBS . toStrict . JSON.encode
 
 -- | Return user document overall statistics as JSON
 -- document.

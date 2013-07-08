@@ -4,7 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 module Snaplet.Types where
 
-import Control.Lens
+import Control.Lens hiding ((.=))
 import Control.Concurrent.STM
 
 import Snap.Snaplet
@@ -23,13 +23,14 @@ data Doc = Doc
 
 makeLenses ''Doc
 
+instance ToJSON Doc where
+    toJSON doc = object $ ["note"  .= view text doc
+                          ,"times" .= view times doc]
+
 instance Show Doc where
     show = T.unpack . T.take 100 . view text
 
-newtype SHA1 = SHA1 String deriving(Eq,Ord)
-
-instance Show SHA1 where
-    show (SHA1 s) = "SHA1="++s
+type SHA1 = String
 
 data UserCache = UserCache
     { _state :: SHA1
