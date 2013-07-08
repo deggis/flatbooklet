@@ -32,7 +32,7 @@
                 <a href="#view-tags">Tags</a>
               </li>
               <li>
-                <a href="#view-timeline">Timeline</a>
+                <a href="#timeline">Timeline</a>
               </li>
               <li class="divider"></li>             
               <li>
