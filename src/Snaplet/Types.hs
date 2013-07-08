@@ -12,10 +12,19 @@ import Snap.Core
 import Snap.Snaplet.Auth
 import Data.Aeson as JSON
 
+import qualified Data.Text as T
+import Data.Time
 import Data.Text
 import qualified Data.Map as M
 
-type Doc = Text
+data Doc = Doc
+    { _text  :: Text
+    , _times :: [UTCTime] }
+
+makeLenses ''Doc
+
+instance Show Doc where
+    show = T.unpack . T.take 100 . view text
 
 newtype SHA1 = SHA1 String deriving(Eq,Ord)
 
