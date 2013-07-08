@@ -16,18 +16,63 @@ var page_new = function () {
     $('#content').html(html);
 }
 
+var t;
+
 var page_timeline = function () {
     var html = new EJS({url: '/flatbooklet/templates/timeline.ejs'}).render();
     $('#content').html(html);
-    $.get('/example_json.json', function (data) {
-        var s = eval(data);
+    
+    
+    $.get(get_url_base()+'/all', function (data) {
+        var notes = eval('['+data+']')[0]; // FIXME: hack
+        var source = {};
+        source.timeline = {};
+        var tl = source.timeline;
+        tl.headline  = 'Note timeline';
+        tl.type      = 'default';
+        tl.text      = '<p>Default text; insert dates</p>';
+        tl.startDate = '2013,01,07';
+
+        var formatTime = function (time) {
+          return time.toISOString().split('T')[0].replace(/\-/g,',');
+        }
+
+
+        var testHack = new Date();
+        var items = [];
+        for (key in notes) {
+          var note = notes[key];
+          try {
+            var startDate = new Date(note.times[0]);
+            var endDate   = new Date(startDate.getTime() + (24*60*1000));
+              
+            var item = {};
+            item.startDate = formatTime(startDate);
+            item.endDate   = formatTime(endDate);
+            item.headline  = note.note.slice(0,30);
+            item.text      = '<p>'+note.note+'</p>';
+            item.assert =   {
+                     "media":"<blockquote>Jesss</blockquote>",
+                    "credit":"",
+                    "caption":""
+            };
+            items.push(item);
+          } catch(err) {
+            //console.log('invalid date: '+note.times[0]+' with err: '+err);
+            continue;
+          }
+        }
+
+        
+        tl.date = items.slice(0,100);
+        console.log('Timeline with '+tl.date.length+ ' items');
         createStoryJS({
-          type:		'timeline',
-          width:		'1000',
-          height:		'600',
-          source:		s,
-          embed_id:	        'timeline-container',
-          debug:		true
+          type:	    'timeline',
+          width:    '1000',
+          height:   '600',
+          source:   source,
+          embed_id: 'timeline-container',
+          debug:    true
         });
     });
 }

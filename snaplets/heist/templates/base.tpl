@@ -16,6 +16,7 @@
     <script type="text/javascript" src="/jquery/js/jquery-2.0.2.js"></script>
     <script type="text/javascript" src="/bootstrap/js/bootstrap.js"></script>
     <script type="text/javascript" src="/ejs/js/ejs_production.js"></script>
+    <script type="text/javascript" src="/timeline/js/timeline.js"></script>
     <script type="text/javascript" src="/timeline/js/storyjs-embed.js"></script>
     
     <script type="text/javascript" src="/flatbooklet/js/flatbooklet.js"></script>
