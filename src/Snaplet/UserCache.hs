@@ -37,7 +37,8 @@ loadUserCache dir = do
 loadDoc :: FilePath -> IO Doc
 loadDoc path = do
     text <- T.readFile path
-    return $ Doc text (parseTimes text)
+    let times = parseTimes text
+    return $ times `seq` Doc text times
 
 -- |Return SHA1 of the current commit in given dir
 currentSHA1 :: FilePath -> IO (Either String SHA1)

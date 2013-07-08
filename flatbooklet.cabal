@@ -42,6 +42,7 @@ Executable flatbooklet-snap
     filepath,
     directory,
     aeson
+    
 
   if flag(old-base)
     build-depends:
