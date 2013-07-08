@@ -29,8 +29,8 @@ parse1Time = do
             Just tod -> do
                 let localTime = LocalTime day tod
                 return $ localTimeToUTC tz localTime
-            Nothing  -> fail "fail"
-        _      -> fail "fail" -- TODO: or mzero?
+            Nothing  -> parserZero
+        _      -> parserZero
   where tz     = hoursToTimeZone 3 -- TODO: time zones per user
         at     = char '@'
         hyphen = char '-'
@@ -39,8 +39,8 @@ parse1Time = do
 
 parseTimes' :: Parser [UTCTime]
 parseTimes' = do
-    t <- parse1Time
-    return [t]
+    let single = manyTill anyChar (lookAhead parse1Time) *> parse1Time
+    many single
 
 parseTimes :: T.Text -> [UTCTime]
 parseTimes text = do

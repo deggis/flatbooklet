@@ -13,7 +13,9 @@ import qualified Data.Text as T
 import qualified Data.Text.IO as T
 import qualified Data.Map as M
 --import Snaplet.Search
+
 import Snaplet.Types
+import Snaplet.TimeParsers
 
 
 loadUserCache :: FilePath -> IO (Either String UserCache)
@@ -35,7 +37,7 @@ loadUserCache dir = do
 loadDoc :: FilePath -> IO Doc
 loadDoc path = do
     text <- T.readFile path
-    return $ Doc text []
+    return $ Doc text (parseTimes text)
 
 -- |Return SHA1 of the current commit in given dir
 currentSHA1 :: FilePath -> IO (Either String SHA1)
